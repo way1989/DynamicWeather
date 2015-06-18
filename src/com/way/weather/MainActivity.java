@@ -1,7 +1,16 @@
 package com.way.weather;
 
+import org.apache.http.protocol.ResponseConnControl;
+
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SurfaceView;
@@ -23,15 +32,36 @@ public class MainActivity extends AppCompatActivity {
 			"fog_day_loop_1.mp4", "thunder_day_loop_1.mp4" };
 	//private MediaAnim mMediaAnim;
 	private TextureViewMediaAnim mMediaAnim;
-
-	@Override
+	private RequestQueue mVolley;
+	@Override	
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+		mVolley = Volley.newRequestQueue(this);
 //		SurfaceView surfaceView = (SurfaceView) findViewById(R.id.weather_background);
 //		mMediaAnim = new MediaAnim(this, surfaceView);
 		TextureView textureView = (TextureView) findViewById(R.id.weather_background);
 		mMediaAnim = new TextureViewMediaAnim(this, textureView); 
+		String data = "http://open.weather.com.cn/data/?areaid=101010100&type=index_v&date=201506182222&appid=ceaaa48d8046a956";
+		String key = "904c35_SmartWeatherAPI_7d8a542";
+		String url = javademo.standardURLEncoder(data, key);
+		Log.i("way", "url = " + url);
+		StringRequest sr = new StringRequest(data + "&key="+url, new Response.Listener<String>() {
+
+			@Override
+			public void onResponse(String response) {
+				// TODO Auto-generated method stub
+				Log.i("way", "response = " + response);
+			}
+		}, new Response.ErrorListener() {
+
+			@Override
+			public void onErrorResponse(VolleyError error) {
+				// TODO Auto-generated method stub
+				Log.i("way", "error = " + error);
+			}
+		});
+		mVolley.add(sr);
 	}
 
 	@Override
