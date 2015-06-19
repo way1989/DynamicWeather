@@ -42,11 +42,12 @@ public class MainActivity extends AppCompatActivity {
 //		mMediaAnim = new MediaAnim(this, surfaceView);
 		TextureView textureView = (TextureView) findViewById(R.id.weather_background);
 		mMediaAnim = new TextureViewMediaAnim(this, textureView); 
-		String data = "http://open.weather.com.cn/data/?areaid=101010100&type=index_v&date=201506182222&appid=ceaaa48d8046a956";
+		String data = "http://open.weather.com.cn/data/?areaid=101010100&type=forecast_v&date=201506190915&appid=ceaaa48d8046a956";
 		String key = "904c35_SmartWeatherAPI_7d8a542";
-		String url = javademo.standardURLEncoder(data, key);
-		Log.i("way", "url = " + url);
-		StringRequest sr = new StringRequest(data + "&key="+url, new Response.Listener<String>() {
+		String baseKey = javademo.standardURLEncoder(data, key);
+		String baseUrl = "http://open.weather.com.cn/data/?areaid=101010100&type=forecast_v&date=201506190915&appid=ceaaa4";
+		Log.i("way", "url = " + baseKey);
+		StringRequest sr = new StringRequest(baseUrl + "&key="+baseKey, new Response.Listener<String>() {
 
 			@Override
 			public void onResponse(String response) {
