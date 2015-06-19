@@ -1,25 +1,32 @@
 package com.way.weather;
 
-import org.apache.http.protocol.ResponseConnControl;
+import java.util.ArrayList;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import android.os.Bundle;
+import android.support.v4.view.ViewCompat;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.TextureView;
+import android.view.View;
+import android.widget.ArrayAdapter;
 
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.way.observablescrollview.ObservableListView;
+import com.way.observablescrollview.ObservableScrollViewCallbacks;
+import com.way.observablescrollview.ScrollState;
+import com.way.observablescrollview.ScrollUtils;
 
-import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.SurfaceView;
-import android.view.TextureView;
-import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
-
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements ObservableScrollViewCallbacks{
 	private static final String[] AUDIO_LIST = { "sunny_day.mp3",
 			"sunny_night.mp3", "cloudy_day.mp3", "mostly_cloudy_day.mp3",
 			"mostly_cloudy_night.mp3", "rain_heavy.mp3", "rain_small.mp3",
@@ -33,10 +40,33 @@ public class MainActivity extends AppCompatActivity {
 	//private MediaAnim mMediaAnim;
 	private TextureViewMediaAnim mMediaAnim;
 	private RequestQueue mVolley;
+	private static final String WEATHER_ALL = "http://weatherapi.market.xiaomi.com/wtr-v2/weather?cityId=%s";
+	   private View mHeaderView;
+	    private View mToolbarView;
+	    private ObservableListView mListView;
+	    private int mBaseTranslationY;
+	    public static ArrayList<String> getDummyData(int num) {
+	        ArrayList<String> items = new ArrayList<>();
+	        for (int i = 1; i <= num; i++) {
+	            items.add("Item " + i);
+	        }
+	        return items;
+	    }
 	@Override	
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+		 setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
+
+	        mHeaderView = findViewById(R.id.header);
+	        ViewCompat.setElevation(mHeaderView, getResources().getDimension(R.dimen.toolbar_elevation));
+	        mToolbarView = findViewById(R.id.toolbar);
+	        mListView = (ObservableListView) findViewById(R.id.list);
+	        mListView.setScrollViewCallbacks(this);
+	        LayoutInflater inflater = LayoutInflater.from(this);
+	        mListView.addHeaderView(inflater.inflate(R.layout.padding, mListView, false)); // toolbar
+	        mListView.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, getDummyData(100)));
+	        
 		mVolley = Volley.newRequestQueue(this);
 //		SurfaceView surfaceView = (SurfaceView) findViewById(R.id.weather_background);
 //		mMediaAnim = new MediaAnim(this, surfaceView);
@@ -63,6 +93,30 @@ public class MainActivity extends AppCompatActivity {
 			}
 		});
 		mVolley.add(sr);
+		
+		JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(String.format(WEATHER_ALL, "101010100"),null, new Response.Listener<JSONObject>() {
+
+			@Override
+			public void onResponse(JSONObject response) {
+				try {
+					Log.i("way", "jsonObjectRequest forecast = " + response.getJSONObject("forecast"));
+					Log.i("way", "jsonObjectRequest realtime = " + response.getJSONObject("realtime"));
+					Log.i("way", "jsonObjectRequest index = " + response.getJSONObject("index"));
+					Log.i("way", "jsonObjectRequest accu_cc = " + response.getJSONObject("accu_cc"));
+					Log.i("way", "jsonObjectRequest alert = " + response.getJSONObject("alert"));
+				} catch (JSONException e) {
+					e.printStackTrace();
+				}
+			}
+		}, new Response.ErrorListener() {
+
+			@Override
+			public void onErrorResponse(VolleyError error) {
+				// TODO Auto-generated method stub
+				Log.i("way", "jsonObjectRequest error = " + error);
+			}
+		});
+		mVolley.add(jsonObjectRequest);
 	}
 
 	@Override
@@ -93,21 +147,73 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		// Inflate the menu; this adds items to the action bar if it is present.
-		getMenuInflater().inflate(R.menu.main, menu);
-		return true;
+	public void onScrollChanged(int scrollY, boolean firstScroll,
+			boolean dragging) {
+	       if (dragging) {
+	            int toolbarHeight = mToolbarView.getHeight();
+	            if (firstScroll) {
+	                float currentHeaderTranslationY = mHeaderView.getTranslationY();
+	                if (-toolbarHeight < currentHeaderTranslationY) {
+	                    mBaseTranslationY = scrollY;
+	                }
+	            }
+	            float headerTranslationY = ScrollUtils.getFloat(-(scrollY - mBaseTranslationY), -toolbarHeight, 0);
+	            mHeaderView.animate().cancel();
+	            mHeaderView.setTranslationY(headerTranslationY);
+	        }		
 	}
 
 	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		// Handle action bar item clicks here. The action bar will
-		// automatically handle clicks on the Home/Up button, so long
-		// as you specify a parent activity in AndroidManifest.xml.
-		int id = item.getItemId();
-		if (id == R.id.action_settings) {
-			return true;
-		}
-		return super.onOptionsItemSelected(item);
+	public void onDownMotionEvent() {
+		// TODO Auto-generated method stub
+		
 	}
+
+	@Override
+	public void onUpOrCancelMotionEvent(ScrollState scrollState) {
+	    mBaseTranslationY = 0;
+
+        if (scrollState == ScrollState.DOWN) {
+            showToolbar();
+        } else if (scrollState == ScrollState.UP) {
+            int toolbarHeight = mToolbarView.getHeight();
+            int scrollY = mListView.getCurrentScrollY();
+            if (toolbarHeight <= scrollY) {
+                hideToolbar();
+            } else {
+                showToolbar();
+            }
+        } else {
+            // Even if onScrollChanged occurs without scrollY changing, toolbar should be adjusted
+            if (!toolbarIsShown() && !toolbarIsHidden()) {
+                // Toolbar is moving but doesn't know which to move:
+                // you can change this to hideToolbar()
+                showToolbar();
+            }
+        }
+	}
+    private boolean toolbarIsShown() {
+        return mHeaderView.getTranslationY() == 0;
+    }
+
+    private boolean toolbarIsHidden() {
+        return mHeaderView.getTranslationY() == -mToolbarView.getHeight();
+    }
+
+    private void showToolbar() {
+        float headerTranslationY = mHeaderView.getTranslationY();
+        if (headerTranslationY != 0) {
+        	mHeaderView.animate().cancel();
+        	mHeaderView.animate().translationY(0).setDuration(200).start();
+        }
+    }
+
+    private void hideToolbar() {
+        float headerTranslationY = mHeaderView.getTranslationY();
+        int toolbarHeight = mToolbarView.getHeight();
+        if (headerTranslationY != -toolbarHeight) {
+        	mHeaderView.animate().cancel();
+        	mHeaderView.animate().translationY(-toolbarHeight).setDuration(200).start();
+        }
+    }
 }
