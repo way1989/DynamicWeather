@@ -1,6 +1,7 @@
 package com.way.weather;
 
 import java.util.ArrayList;
+import java.util.Locale;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -25,6 +26,12 @@ import com.way.observablescrollview.ObservableListView;
 import com.way.observablescrollview.ObservableScrollViewCallbacks;
 import com.way.observablescrollview.ScrollState;
 import com.way.observablescrollview.ScrollUtils;
+import com.way.weather.plugin.bean.AQI;
+import com.way.weather.plugin.bean.Alerts;
+import com.way.weather.plugin.bean.Forecast;
+import com.way.weather.plugin.bean.Index;
+import com.way.weather.plugin.bean.RealTime;
+import com.way.weather.plugin.spider.WeatherController;
 
 public class MainActivity extends AppCompatActivity implements ObservableScrollViewCallbacks{
 	private static final String[] AUDIO_LIST = { "sunny_day.mp3",
@@ -76,7 +83,7 @@ public class MainActivity extends AppCompatActivity implements ObservableScrollV
 		String key = "904c35_SmartWeatherAPI_7d8a542";
 		String baseKey = javademo.standardURLEncoder(data, key);
 		String baseUrl = "http://open.weather.com.cn/data/?areaid=101010100&type=forecast_v&date=201506190915&appid=ceaaa4";
-		Log.i("way", "url = " + baseKey);
+		//Log.i("way", "url = " + baseKey);
 		StringRequest sr = new StringRequest(baseUrl + "&key="+baseKey, new Response.Listener<String>() {
 
 			@Override
@@ -92,18 +99,41 @@ public class MainActivity extends AppCompatActivity implements ObservableScrollV
 				Log.i("way", "error = " + error);
 			}
 		});
-		mVolley.add(sr);
-		
-		JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(String.format(WEATHER_ALL, "101010100"),null, new Response.Listener<JSONObject>() {
+		//mVolley.add(sr);
+		final String postID = "101280601";
+		JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(String.format(WEATHER_ALL, postID),null, new Response.Listener<JSONObject>() {
 
 			@Override
 			public void onResponse(JSONObject response) {
 				try {
-					Log.i("way", "jsonObjectRequest forecast = " + response.getJSONObject("forecast"));
-					Log.i("way", "jsonObjectRequest realtime = " + response.getJSONObject("realtime"));
-					Log.i("way", "jsonObjectRequest index = " + response.getJSONObject("index"));
-					Log.i("way", "jsonObjectRequest accu_cc = " + response.getJSONObject("accu_cc"));
-					Log.i("way", "jsonObjectRequest alert = " + response.getJSONObject("alert"));
+//					String language = getResources().getConfiguration().locale
+//							.toString();
+					String language = Locale.TAIWAN.toString();
+					
+					Forecast forecast = WeatherController.convertToNewForecast(
+							response, language, postID);
+					//Log.i("way", "jsonObjectRequest forecast = " + forecast);
+					
+					RealTime realTime = WeatherController.convertToNewRealTime(
+							response.getJSONObject("realtime"), language, postID);
+					//Log.i("way", "realTime = " + realTime);
+					
+					Alerts alerts = WeatherController.convertToNewAlert(response.getJSONArray("alert"), postID);
+					//Log.i("way", "alerts = " + alerts);
+					
+					Index index = WeatherController.convertToNewIndex(response,
+							language, postID);
+					//Log.i("way", "index = " + index);
+					
+					AQI aqi = WeatherController.convertToNewAQI(response.getJSONObject("aqi"), language, postID);
+					Log.i("way", "aqi = " + aqi);
+					//Log.i("way", "/njsonObjectRequest realtime = " + response.getJSONObject("realtime"));
+					//Log.i("way", "/njsonObjectRequest alert = " + response.getJSONArray("alert"));
+					//Log.i("way", "/njsonObjectRequest aqi = " + response.getJSONObject("aqi"));
+					//Log.i("way", "jsonObjectRequest index = " + response.getJSONObject("index"));
+					//Log.i("way", "/njsonObjectRequest accu_cc = " + response.getJSONObject("accu_cc"));
+					//Log.i("way", "/njsonObjectRequest accu_f5 = " + response.getJSONObject("accu_f5"));
+					//Log.i("way", "/njsonObjectRequest today = " + response.getJSONObject("today"));
 				} catch (JSONException e) {
 					e.printStackTrace();
 				}
